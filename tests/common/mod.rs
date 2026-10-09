@@ -60,8 +60,39 @@ pub fn c_flags(default: &str) -> String {
     env::var("CFLAGS").unwrap_or_else(|_| default.to_owned())
 }
 
+/// The bugs the port fixes that libinjection still has, as what to replace in
+/// which of its sources. The C library is built with them, so that it and the
+/// port still agree on every input. `tests/deviations.rs` has a test for each.
+const FIXES: [(&str, &str, &str); 1] = [
+    // Where `char` is signed, a 0xFF byte reads as the end of the input:
+    // https://github.com/libinjection/libinjection/issues/92
+    (
+        "libinjection_html5.c",
+        "        default:\n            return ch;\n",
+        "        default:\n            return (unsigned char)ch;\n",
+    ),
+];
+
+/// One of libinjection's C files with `FIXES` applied, or `None` if it has
+/// none to apply.
+fn fixed_source(file: &str) -> Option<String> {
+    let mut fixes = FIXES.iter().filter(|(fixed, ..)| *fixed == file).peekable();
+    fixes.peek()?;
+    let mut source = upstream_source(&format!("src/{file}"));
+    for (_, theirs, ours) in fixes {
+        assert_eq!(
+            source.matches(theirs).count(),
+            1,
+            "{file} does not have {theirs:?} once: fixed upstream?"
+        );
+        source = source.replace(theirs, ours);
+    }
+    Some(source)
+}
+
 /// Compiles `program`, a C file of this repository, together with
-/// libinjection's sources, and returns the path of the binary.
+/// libinjection's sources as fixed by `FIXES`, and returns the path of the
+/// binary.
 pub fn build_with_libinjection(program: &str, default_flags: &str) -> PathBuf {
     let sources = upstream().join("src");
     let program = Path::new(env!("CARGO_MANIFEST_DIR")).join(program);
@@ -70,7 +101,26 @@ pub fn build_with_libinjection(program: &str, default_flags: &str) -> PathBuf {
     let binary = tmp.join(format!("libinjection-{name}"));
     // Built aside and moved into place, so that another run still executing
     // the previous binary is left alone.
-    let building = tmp.join(format!("libinjection-{name}.{}", std::process::id()));
+    let pid = std::process::id();
+    let building = tmp.join(format!("libinjection-{name}.{pid}"));
+
+    // Upstream's files where they need no fix, and copies that have it
+    // otherwise: next to the binary, with the headers found through `-I`.
+    let mut copies = Vec::new();
+    let library = [
+        "libinjection_sqli.c",
+        "libinjection_html5.c",
+        "libinjection_xss.c",
+    ]
+    .map(|file| match fixed_source(file) {
+        None => sources.join(file),
+        Some(fixed) => {
+            let copy = tmp.join(format!("libinjection-{name}.{pid}.{file}"));
+            fs::write(&copy, fixed).unwrap();
+            copies.push(copy.clone());
+            copy
+        }
+    });
 
     let cc = c_compiler();
     let status = Command::new(&cc)
@@ -83,18 +133,14 @@ pub fn build_with_libinjection(program: &str, default_flags: &str) -> PathBuf {
         .arg("-I")
         .arg(&sources)
         .arg(&program)
-        .args(
-            [
-                "libinjection_sqli.c",
-                "libinjection_html5.c",
-                "libinjection_xss.c",
-            ]
-            .map(|source| sources.join(source)),
-        )
+        .args(&library)
         .arg("-o")
         .arg(&building)
         .status()
         .unwrap_or_else(|e| panic!("cannot run the C compiler `{cc}` (set CC): {e}"));
+    for copy in copies {
+        fs::remove_file(copy).unwrap();
+    }
     assert!(status.success(), "`{cc}` failed to build {name}");
     fs::rename(&building, &binary).unwrap();
     binary

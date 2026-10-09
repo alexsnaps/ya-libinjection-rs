@@ -3,8 +3,10 @@
 //! regular expressions.
 //!
 //! The port follows libinjection 4.0.0 (`d88a8f8`) and aims to give the same
-//! verdict as the C library on every input. It needs neither `std` nor an
-//! allocator.
+//! verdict as the C library on every input, but for one bug it fixes: a 0xFF
+//! byte where an attribute's name or value would start is a byte like any
+//! other here, while the C library takes it for the end of the input. It
+//! needs neither `std` nor an allocator.
 //!
 //! Inputs are bytes: decode them (URL-decoding, for instance) the way the
 //! application that will consume them does before checking them.

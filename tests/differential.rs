@@ -1,6 +1,7 @@
 //! The port against libinjection itself: `tests/oracle/oracle.c` runs the C
-//! library, built from the sources vendored in `tests/upstream/src`, and
-//! every input has to come out of both identically. Compared are the SQL
+//! library, built from the sources vendored in `tests/upstream/src` with the
+//! fixes the port has (`FIXES` in `tests/common`), and every input has to
+//! come out of both identically. Compared are the SQL
 //! tokens, folded tokens, fingerprints and verdicts in each of the six
 //! quote/dialect contexts, and the HTML5 tokens and XSS verdicts in each of
 //! the five HTML contexts.
