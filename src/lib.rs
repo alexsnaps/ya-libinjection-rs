@@ -33,7 +33,8 @@ mod html5;
 mod sqli;
 mod xss;
 
-pub use sqli::Fingerprint;
+pub use html5::Context as HtmlContext;
+pub use sqli::{Dialect, Fingerprint};
 
 /// Implementation details, for this crate's own tests and their differential
 /// oracle. Not part of the API: anything in here can change in any release.
@@ -68,6 +69,20 @@ pub fn sqli(input: &[u8]) -> Option<Fingerprint> {
     sqli::detect(input)
 }
 
+/// Like [`sqli`], but also returns which [`Dialect`] the match was found in.
+#[must_use]
+pub fn sqli_with_dialect(input: &[u8]) -> Option<(Fingerprint, Dialect)> {
+    sqli::detect_with_dialect(input)
+}
+
+/// Checks `input` for SQL injection, scanning at most `max_bytes`.
+///
+/// Equivalent to `sqli(&input[..max_bytes.min(input.len())])`.
+#[must_use]
+pub fn sqli_with_limit(input: &[u8], max_bytes: usize) -> Option<Fingerprint> {
+    sqli::detect(&input[..max_bytes.min(input.len())])
+}
+
 /// Checks `input` for cross-site scripting.
 ///
 /// The input is tested as HTML, and as if it continued an attribute value,
@@ -76,4 +91,20 @@ pub fn sqli(input: &[u8]) -> Option<Fingerprint> {
 #[must_use]
 pub fn xss(input: &[u8]) -> bool {
     xss::detect(input)
+}
+
+/// Like [`xss`], but also returns which [`HtmlContext`] the match was found in.
+///
+/// Returns `None` if the input looks benign.
+#[must_use]
+pub fn xss_with_context(input: &[u8]) -> Option<HtmlContext> {
+    xss::detect_with_context(input)
+}
+
+/// Checks `input` for cross-site scripting, scanning at most `max_bytes`.
+///
+/// Equivalent to `xss(&input[..max_bytes.min(input.len())])`.
+#[must_use]
+pub fn xss_with_limit(input: &[u8], max_bytes: usize) -> bool {
+    xss::detect(&input[..max_bytes.min(input.len())])
 }
