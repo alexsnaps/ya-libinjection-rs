@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  RUSTDOCFLAGS: -D warnings
+
+jobs:
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --no-self-update --profile minimal --component rustfmt
+          rustup default stable
+      - run: cargo fmt --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --no-self-update --profile minimal --component clippy
+          rustup default stable
+      - name: The library, as its users build it
+        run: cargo clippy -- -D warnings
+      - name: The tests, and the library with the `internals` feature they turn on
+        run: cargo clippy --all-targets -- -D warnings
+
+  build:
+    name: Build, docs and package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --no-self-update --profile minimal
+          rustup default stable
+      - run: cargo build
+      - run: cargo doc --no-deps
+      # The published crate leaves the tests out: check that it builds without them.
+      - run: cargo package
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --no-self-update --profile minimal
+          rustup default stable
+      # The differential tests build libinjection with the runner's C compiler.
+      - run: cargo test
