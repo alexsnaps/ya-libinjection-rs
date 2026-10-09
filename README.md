@@ -22,15 +22,22 @@ The name is a play on the original's: `libinjection` and `libinjection-rs` are
 taken on crates.io, by bindings to the C library.
 
 It is meant to give the same answer as the C library, as built on x86-64, on
-every input. Two things check that:
+every input, but for one bug it fixes: a 0xFF byte where an attribute's name
+or value would start, which the C library takes for the end of the input,
+hiding the rest of the tag from the XSS checks. `<img \xff onerror=alert(1)>`
+is flagged here. Upstream has it as
+[issue 92](https://github.com/libinjection/libinjection/issues/92), still
+open.
+
+Two things check that:
 
 - libinjection's own tests: its 584 expected-output files and its sample
   corpora.
-- A differential test, which builds the C library and compares it with the
-  port on upstream's corpus and on fuzzed inputs: tokens, folded tokens,
-  fingerprints and verdicts, in every context. A default run compares some
-  940,000 inputs. The longest so far compared 20 million and found no
-  difference.
+- A differential test, which builds the C library with that fix applied and
+  compares it with the port on upstream's corpus and on fuzzed inputs: tokens,
+  folded tokens, fingerprints and verdicts, in every context. A default run
+  compares some 940,000 inputs. The longest so far compared 20 million and
+  found no difference.
 
 ## Testing
 
@@ -103,9 +110,6 @@ exposed:
 
 ## Open issues and decisions
 
-- **A 0xFF byte ends HTML tokenization.** `<img \xff onerror=alert(1)>` is not
-  flagged: not by libinjection on x86, and so not by the port. Keep the parity,
-  or fix it here and report it upstream?
 - **`char` signedness.** The port behaves like the C library built with a
   signed `char`. Where `char` is unsigned, as on ARM Linux, the C library
   itself answers differently on some inputs with bytes above 127.
@@ -121,7 +125,8 @@ exposed:
   variants of the port, the tests caught 11, and the other 3 appear to be
   equivalent. None of that is in the repository.
 - **Following upstream.** Only the tables are generated. Changes to the C code
-  have to be ported by hand.
+  have to be ported by hand, and a fix that upstream makes dropped from `FIXES`
+  in `tests/common/mod.rs`.
 
 ## License
 

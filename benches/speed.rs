@@ -2,7 +2,8 @@
 //!
 //! Both are run over the same inputs and timed the same way: the port
 //! here, and the C library by `benches/speed.c`, which is built from the
-//! sources vendored in `tests/upstream/src`. That needs a C compiler:
+//! sources vendored in `tests/upstream/src`, with the fixes the port has
+//! (`FIXES` in `tests/common`). That needs a C compiler:
 //! `CC` (default `cc`) with `CFLAGS` (default `-O3`, what upstream's
 //! `--enable-optimize` builds with).
 //!
