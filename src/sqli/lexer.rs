@@ -639,7 +639,7 @@ impl<'a> Lexer<'a> {
     ///
     /// Folding has tokens written straight into its slots with this:
     /// handing them over by value is a good part of what tokenizing costs.
-    pub(crate) fn next_into(&mut self, cur: &mut Token) -> bool {
+    pub fn next_into(&mut self, cur: &mut Token) -> bool {
         let s = self.s;
         *cur = Token::default();
 
@@ -687,14 +687,5 @@ impl<'a> Lexer<'a> {
             }
         }
         false
-    }
-}
-
-impl Iterator for Lexer<'_> {
-    type Item = Token;
-
-    fn next(&mut self) -> Option<Token> {
-        let mut token = Token::default();
-        self.next_into(&mut token).then_some(token)
     }
 }

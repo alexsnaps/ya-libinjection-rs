@@ -66,7 +66,9 @@ fn print_token(out: &mut Vec<u8>, token: &Token) {
 fn sqli_tokens() {
     run_cases("test-tokens-", |input| {
         let mut out = Vec::new();
-        for token in Lexer::new(input, Quote::None, Dialect::Ansi) {
+        let mut lexer = Lexer::new(input, Quote::None, Dialect::Ansi);
+        let mut token = Token::default();
+        while lexer.next_into(&mut token) {
             print_token(&mut out, &token);
         }
         out

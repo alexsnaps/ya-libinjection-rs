@@ -96,7 +96,8 @@ fn dump(input: &[u8]) -> String {
     for (k, (quote, dialect)) in SQL_CONTEXTS.into_iter().enumerate() {
         write!(out, " T{k}:").unwrap();
         let mut lexer = Lexer::new(input, quote, dialect);
-        for token in lexer.by_ref() {
+        let mut token = Token::default();
+        while lexer.next_into(&mut token) {
             dump_token(&mut out, &token);
         }
         let stats = lexer.stats;

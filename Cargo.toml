@@ -5,9 +5,9 @@ edition = "2024"
 description = "A pure Rust port of libinjection, which detects SQL injection and cross-site scripting"
 license = "BSD-3-Clause"
 keywords = ["libinjection", "sqli", "xss", "sql-injection", "waf"]
-# The tests come with 28 MB of files vendored from libinjection, which the
-# benchmark runs on as well.
-exclude = ["/benches", "/tests"]
+# Only the library is published. The tests come with 28 MB of files vendored
+# from libinjection, which the benchmark and the tools work on as well.
+include = ["/src", "/LICENSE", "/README.md"]
 
 [lib]
 # `cargo bench` is for benches/speed.rs, not for running the unit tests.
